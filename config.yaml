@@ -1,0 +1,26 @@
+# Training configuration
+total_timesteps: 500_000
+n_envs: 20
+max_episode_steps: 500
+n_steps: 100
+batch_size: 1600
+learning_rate: 0.0003
+n_epochs: 4
+
+# All network and policy configuration
+policy_type: MlpPolicy
+policy_kwargs:
+  net_arch: [64, 64]
+
+wandb:
+  enabled: true
+
+# Hydra output directory configuration
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S} 
+  sweep:
+    dir: multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+
+
