@@ -9,6 +9,7 @@ from gymnasium.envs.classic_control import utils
 from gymnasium.error import DependencyNotInstalled
 from gymnasium.vector import VectorEnv
 from gymnasium.vector.utils import batch_space
+from sklearn.mixture import GaussianMixture
 
 
 class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
@@ -45,7 +46,7 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
                 np.inf,
                 self.theta_threshold_radians,
                 np.inf,
-                self.x_threshold * 3 / 4
+                self.x_threshold
             ],
             dtype=np.float32,
         )
@@ -137,10 +138,24 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         )  # default high
         self.state = self.np_random.uniform(low=low, high=high, size=(4,))
 
+        min_mouse_x = self.observation_space.low[-1]
+        max_mouse_x = self.observation_space.high[-1]
         # Generate a trajectory of mouse positions for the entire episode
-        # self.mouse_x_traj = np.random.uniform(self.x_min, self.x_max, size=self.env._max_episode_steps)
-        self.mouse_x_traj = np.full(self._max_episode_steps, 
-                                    np.random.uniform(self.observation_space.low[-1], self.observation_space.high[-1]))
+        # self.mouse_x_traj = np.full(self._max_episode_steps, 
+                                    # np.random.uniform(self.observation_space.low[-1], self.observation_space.high[-1]))
+        mean_1 = np.random.uniform(min_mouse_x, max_mouse_x)
+        mean_2 = np.random.uniform(min_mouse_x, max_mouse_x)
+        first_point = np.clip(np.random.normal(mean_1, 1), min_mouse_x, max_mouse_x)
+        self.mouse_x_traj = [first_point]
+        while len(self.mouse_x_traj) < self._max_episode_steps:
+            speed = np.random.uniform(0.1, 1.0, 1)
+            choice = np.random.choice([mean_1, mean_2])
+            next_point = np.clip(np.random.normal(choice, 1), min_mouse_x, max_mouse_x)
+            interp_points = np.linspace(self.mouse_x_traj[-1], next_point, 
+                                        num=int(np.abs(self.mouse_x_traj[-1] - next_point) / speed), endpoint=False)
+            self.mouse_x_traj.extend(interp_points)
+        self.mouse_x_traj = self.mouse_x_traj[:self._max_episode_steps]
+
         self.state = np.append(self.state, self.mouse_x_traj[0])
         self._elapsed_steps = 0
 
