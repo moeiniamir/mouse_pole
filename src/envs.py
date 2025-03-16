@@ -114,7 +114,8 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             else:
                 reward = 0
         else:
-            reward = np.min(np.square(x - self.x_threshold), np.square(x + self.x_threshold))
+            reward = -np.minimum(np.square(x - self.x_threshold), np.square(x + self.x_threshold))
+            reward = max(reward, -1)  # Clip the negative reward at -1
 
         if self.render_mode == "human":
             self.render()
