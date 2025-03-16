@@ -25,6 +25,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 import os
 import torch
+OmegaConf.register_new_resolver("eval", eval)
 
 # %%
 @hydra.main(config_path=".", config_name="config", version_base=None)
