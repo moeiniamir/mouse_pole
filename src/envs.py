@@ -28,13 +28,13 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.total_mass = self.masspole + self.masscart
         self.length = 0.5  # actually half the pole's length
         self.polemass_length = self.masspole * self.length
-        self.force_mag = 10.0
+        self.force_mag = 30.0
         self.tau = 0.02  # seconds between state updates
         self.kinematics_integrator = "euler"
         self.pole_friction = 0.1  # friction coefficient for the pole
 
         # Angle at which to fail the episode
-        self.theta_threshold_radians = 180 * 2 * math.pi / 360
+        self.theta_threshold_radians = 45 * 2 * math.pi / 360
         self.x_threshold = 2.4
 
         # Angle limit set to 2 * theta_threshold_radians so failing observation
@@ -103,22 +103,24 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.state = np.array((x, x_dot, theta, theta_dot, self.mouse_x_traj[self._elapsed_steps]), dtype=np.float64)
         self._elapsed_steps += 1
 
-        terminated = bool(
-            x < -self.x_threshold
-            or x > self.x_threshold
-        )
+        # terminated = bool(
+        #     x < -self.x_threshold
+        #     or x > self.x_threshold
+        # )
 
-        # distance_reward = .50 * (1.0 - np.abs(self.state[0] - self.state[-1]) / (self.x_threshold * 7 / 4))
-        distance_reward = .5 * np.exp(-np.abs(self.state[0] - self.state[-1]))
-        # angle_reward = .50 * (1.0 - np.abs(self.state[2]) / self.theta_threshold_radians)
-        angle_reward = .5 * np.sin(self.state[2])
-        reward = distance_reward + angle_reward
+        if -self.x_threshold <= self.state[0] <= self.x_threshold:
+            if np.abs(self.state[2]) < self.theta_threshold_radians:
+                reward = np.exp(-np.abs(self.state[0] - self.state[-1]))
+            else:
+                reward = 0
+        else:
+            reward = np.min(np.square(x - self.x_threshold), np.square(x + self.x_threshold))
 
         if self.render_mode == "human":
             self.render()
 
         truncated = self._elapsed_steps >= self._max_episode_steps
-        return np.array(self.state, dtype=np.float32), reward, terminated, truncated, {}
+        return np.array(self.state, dtype=np.float32), reward, False, truncated, {}
 
     def reset(
         self,
