@@ -29,7 +29,7 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.total_mass = self.masspole + self.masscart
         self.length = 0.5  # actually half the pole's length
         self.polemass_length = self.masspole * self.length
-        self.force_mag = 30.0
+        self.force_mag = 50.0
         self.tau = 0.02  # seconds between state updates
         self.kinematics_integrator = "euler"
         self.pole_friction = 0.1  # friction coefficient for the pole
@@ -111,7 +111,7 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         if -self.x_threshold <= self.state[0] <= self.x_threshold:
             if np.abs(self.state[2]) < self.theta_threshold_radians:
-                reward = np.exp(-np.abs(self.state[0] - self.state[-1]))
+                reward = np.exp(-np.abs(self.state[0] - self.state[-1])*2)
             else:
                 reward = 0
         else:
@@ -148,12 +148,16 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         first_point = np.clip(np.random.normal(mean_1, 1), min_mouse_x, max_mouse_x)
         self.mouse_x_traj = [first_point]
         while len(self.mouse_x_traj) < self._max_episode_steps:
-            speed = np.random.beta(0.5, 1.2) * 0.95 + 0.05  # beta(0.5, 1) scaled to [0.05, 1.0]
-            choice = np.random.choice([mean_1, mean_2])
-            next_point = np.clip(np.random.normal(choice, 1), min_mouse_x, max_mouse_x)
-            interp_points = np.linspace(self.mouse_x_traj[-1], next_point, 
-                                        num=int(np.abs(self.mouse_x_traj[-1] - next_point) / speed), endpoint=False)
-            self.mouse_x_traj.extend(interp_points)
+            if np.random.rand() < 0.25:
+                sleep_time = np.random.uniform(5, 15)/100 * self._max_episode_steps
+                self.mouse_x_traj.extend([self.mouse_x_traj[-1]] * int(sleep_time))
+            else:
+                speed = np.random.beta(0.5, 2) * 0.95 + 0.05  # beta(0.5, 1) scaled to [0.05, 1.0]
+                choice = np.random.choice([mean_1, mean_2])
+                next_point = np.clip(np.random.normal(choice, 1), min_mouse_x, max_mouse_x)
+                interp_points = np.linspace(self.mouse_x_traj[-1], next_point, 
+                                            num=int(np.abs(self.mouse_x_traj[-1] - next_point) / speed), endpoint=False)
+                self.mouse_x_traj.extend(interp_points)
         self.mouse_x_traj = self.mouse_x_traj[:self._max_episode_steps]
 
         self.state = np.append(self.state, self.mouse_x_traj[0])
