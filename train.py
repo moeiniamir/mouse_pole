@@ -25,6 +25,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 import os
 import torch
+import numpy as np
 OmegaConf.register_new_resolver("eval", eval)
 
 # %%
@@ -63,6 +64,11 @@ def main(cfg: DictConfig):
     # Create policy_kwargs dictionary
     policy_kwargs = {"net_arch": net_arch, "activation_fn": torch.nn.SiLU}
 
+    base_learning_rate = cfg.learning_rate
+    def lr_schedule(progress_remaining: float) -> float:
+        # cosine schedule: 1 -> 1e-5
+        return max(base_learning_rate * np.cos((1 - progress_remaining) * np.pi / 2), 1e-5)
+
 
     model = PPO(
         cfg.policy_type, 
@@ -72,7 +78,7 @@ def main(cfg: DictConfig):
         tensorboard_log=f"runs/{wandb.run.id}",
         n_steps=cfg.n_steps,
         batch_size=cfg.batch_size,
-        learning_rate=cfg.learning_rate,
+        learning_rate=lr_schedule,
         n_epochs=cfg.n_epochs,
         policy_kwargs=policy_kwargs,
         )
