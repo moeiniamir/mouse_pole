@@ -19,14 +19,25 @@ import gymnasium as gym
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import VecFrameStack
 from src import utils
 from src.envs import MouseFollowingCartPole
+import wandb
 
 # %%
-vec_env = make_vec_env(MouseFollowingCartPole, n_envs=1, env_kwargs={"max_episode_steps": 500, "render_mode": "rgb_array"})
+run_id = "n1bod0k9"
+vec_env = make_vec_env(MouseFollowingCartPole, n_envs=1, env_kwargs={"max_episode_steps": 200, "render_mode": "rgb_array"})
+try:
+    api = wandb.Api()
+    run = api.run(f"cartpole/{run_id}")
+    print(run.config)
+    n_stack = run.config['n_stack']
+    vec_env = VecFrameStack(vec_env, n_stack=n_stack)
+except Exception as e:
+    print(f"Could not load n_stack from wandb: {e}")
 vec_env = utils.RenderWrapper(vec_env)
 
-model = PPO.load("ppo_mouse_following_1jveckpl.zip", device="cpu")
+model = PPO.load(f"ppo_mouse_following_{run_id}.zip", device="cpu")
 
 obs = vec_env.reset()
 while True:
