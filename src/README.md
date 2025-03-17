@@ -12,7 +12,7 @@ uv pip install -r requirements.txt
 
 ## Training
 
-Run sweeps with `hydra` with `ray` as the launcher. Below is an example sweep command.
+Sweeps use `hydra` with `ray` as the multi-process launcher. Below is an example sweep command. Note that the vectorized environment is also multi-process, so the number of CPUs for `ray.remote` should be set accordingly.
 
 ```bash
 python train.py --multirun \
