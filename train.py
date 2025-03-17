@@ -18,7 +18,7 @@
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from src.envs import MouseFollowingCartPole
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecFrameStack
 import wandb
 from wandb.integration.sb3 import WandbCallback
 import hydra
@@ -52,6 +52,9 @@ def main(cfg: DictConfig):
         env_kwargs={"max_episode_steps": cfg.max_episode_steps}, 
         vec_env_cls=SubprocVecEnv
     )
+    
+    # Wrap with VecFrameStack to stack observations
+    vec_env = VecFrameStack(vec_env, n_stack=cfg.n_stack)
 
     # Handle net_arch parameter - ensure it's a list
     net_arch = OmegaConf.to_container(cfg.policy_kwargs.net_arch)
