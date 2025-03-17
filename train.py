@@ -61,7 +61,7 @@ def main(cfg: DictConfig):
     assert isinstance(net_arch, list), "net_arch must be a list"
     
     # Create policy_kwargs dictionary
-    policy_kwargs = {"net_arch": net_arch}
+    policy_kwargs = {"net_arch": net_arch, "activation_fn": torch.nn.SiLU}
 
 
     model = PPO(
