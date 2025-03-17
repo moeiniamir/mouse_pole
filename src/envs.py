@@ -34,8 +34,9 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.kinematics_integrator = "euler"
         self.pole_friction = 0.1  # friction coefficient for the pole
 
-        # Angle at which to fail the episode
-        self.theta_threshold_radians = 45 * 2 * math.pi / 360
+        self.theta_threshold_reward = 45 * 2 * math.pi / 360
+        self.x_threshold_reward = .5
+
         self.x_threshold = 2.4
 
         # Angle limit set to 2 * theta_threshold_radians so failing observation
@@ -44,7 +45,7 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             [
                 self.x_threshold * 2,
                 np.inf,
-                self.theta_threshold_radians,
+                math.pi,
                 np.inf,
                 self.x_threshold
             ],
@@ -110,7 +111,8 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         # )
 
         if -self.x_threshold <= self.state[0] <= self.x_threshold:
-            if np.abs(self.state[2]) < self.theta_threshold_radians:
+            if np.abs(self.state[2]) < self.theta_threshold_reward and \
+                np.abs(self.state[0] - self.state[-1]) < self.x_threshold_reward:
                 reward = np.exp(-np.abs(self.state[0] - self.state[-1])*2)
             else:
                 reward = 0
