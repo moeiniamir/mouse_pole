@@ -67,7 +67,7 @@ def main(cfg: DictConfig):
     base_learning_rate = cfg.learning_rate
     def lr_schedule(progress_remaining: float) -> float:
         # cosine schedule: 1 -> 1e-5
-        return max(base_learning_rate * np.cos((1 - progress_remaining) * np.pi / 2), 1e-5)
+        return max(base_learning_rate * np.cos((1 - progress_remaining) * np.pi / 2), cfg.min_learning_rate)
 
 
     model = PPO(
@@ -81,6 +81,7 @@ def main(cfg: DictConfig):
         learning_rate=lr_schedule,
         n_epochs=cfg.n_epochs,
         policy_kwargs=policy_kwargs,
+        seed=cfg.seed,
         )
     model.learn(
         total_timesteps=cfg.total_timesteps, 

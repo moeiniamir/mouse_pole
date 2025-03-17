@@ -1,12 +1,14 @@
 # Training configuration
-total_timesteps: 1_000_000
+total_timesteps: 50_000_000
 n_envs: 8
 max_episode_steps: 300
 n_steps: 64
 batch_size: ${eval:'${n_steps} * ${n_envs}'}
 learning_rate: 0.0003
+min_learning_rate: 0.000002
 n_epochs: 15
 n_stack: 4  # Number of frames to stack for VecFrameStack
+seed: 42
 
 # All network and policy configuration
 policy_type: MlpPolicy
