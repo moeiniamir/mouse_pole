@@ -33,6 +33,7 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.tau = 0.02  # seconds between state updates
         self.kinematics_integrator = "euler"
         self.pole_friction = 0.1  # friction coefficient for the pole
+        self.noise_scale = 1e-6  # scale for numerical noise
 
         self.theta_threshold_reward = 45 * 2 * math.pi / 360
         self.x_threshold_reward = .5
@@ -69,38 +70,81 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         # self.steps_beyond_terminated = None
 
+    def _add_noise(self, value):
+        """Add small numerical noise to make operations robust across platforms."""
+        return value + np.random.normal(0, self.noise_scale)
+
     def step(self, action):
         assert self.action_space.contains(
             action
         ), f"{action!r} ({type(action)}) invalid"
         assert self.state is not None, "Call reset before using step method."
         x, x_dot, theta, theta_dot, _ = self.state
-        force = self.force_mag if action == 1 else -self.force_mag
-        costheta = np.cos(theta)
-        sintheta = np.sin(theta)
+        force = self._add_noise(self.force_mag if action == 1 else -self.force_mag)
+        costheta = self._add_noise(np.cos(theta))
+        sintheta = self._add_noise(np.sin(theta))
 
         # For the interested reader:
         # https://coneural.org/florian/papers/05_cart_pole.pdf
-        temp = (
-            force + self.polemass_length * np.square(theta_dot) * sintheta
-        ) / self.total_mass
-        thetaacc = (self.gravity * sintheta - costheta * temp - self.pole_friction * theta_dot / (self.polemass_length)) / (
-            self.length
-            * (4.0 / 3.0 - self.masspole * np.square(costheta) / self.total_mass)
-        )
-        xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
+        # Break down each operation and add noise
+        theta_dot_squared = self._add_noise(np.square(theta_dot))
+        polemass_times_theta_squared = self._add_noise(self.polemass_length * theta_dot_squared)
+        polemass_theta_sin = self._add_noise(polemass_times_theta_squared * sintheta)
+        force_plus_term = self._add_noise(force + polemass_theta_sin)
+        temp = self._add_noise(force_plus_term / self.total_mass)
+        
+        # Break down thetaacc calculation
+        gravity_sin = self._add_noise(self.gravity * sintheta)
+        cos_temp = self._add_noise(costheta * temp)
+        pole_friction_term = self._add_noise(self.pole_friction * theta_dot)
+        pole_friction_div = self._add_noise(pole_friction_term / self.polemass_length)
+        
+        numerator_part1 = self._add_noise(gravity_sin - cos_temp)
+        numerator = self._add_noise(numerator_part1 - pole_friction_div)
+        
+        masspole_cos_squared = self._add_noise(np.square(costheta))
+        masspole_cos_squared_scaled = self._add_noise(self.masspole * masspole_cos_squared)
+        masspole_cos_squared_div = self._add_noise(masspole_cos_squared_scaled / self.total_mass)
+        denominator_term = self._add_noise(4.0 / 3.0 - masspole_cos_squared_div)
+        denominator = self._add_noise(self.length * denominator_term)
+        
+        thetaacc = self._add_noise(numerator / denominator)
+        
+        # Break down xacc calculation
+        polemass_thetaacc = self._add_noise(self.polemass_length * thetaacc)
+        polemass_thetaacc_cos = self._add_noise(polemass_thetaacc * costheta)
+        polemass_thetaacc_cos_div = self._add_noise(polemass_thetaacc_cos / self.total_mass)
+        xacc = self._add_noise(temp - polemass_thetaacc_cos_div)
 
         if self.kinematics_integrator == "euler":
-            x = x + self.tau * x_dot
-            x_dot = x_dot + self.tau * xacc
-            theta = theta + self.tau * theta_dot
-            theta_dot = theta_dot + self.tau * thetaacc
+            tau_x_dot = self._add_noise(self.tau * x_dot)
+            x = self._add_noise(x + tau_x_dot)
+            
+            tau_xacc = self._add_noise(self.tau * xacc)
+            x_dot = self._add_noise(x_dot + tau_xacc)
+            
+            tau_theta_dot = self._add_noise(self.tau * theta_dot)
+            theta = self._add_noise(theta + tau_theta_dot)
+            
+            tau_thetaacc = self._add_noise(self.tau * thetaacc)
+            theta_dot = self._add_noise(theta_dot + tau_thetaacc)
         else:  # semi-implicit euler
-            x_dot = x_dot + self.tau * xacc
-            x = x + self.tau * x_dot
-            theta_dot = theta_dot + self.tau * thetaacc
-            theta = theta + self.tau * theta_dot
-        theta = ((theta + np.pi) % (2 * np.pi)) - np.pi
+            tau_xacc = self._add_noise(self.tau * xacc)
+            x_dot = self._add_noise(x_dot + tau_xacc)
+            
+            tau_x_dot = self._add_noise(self.tau * x_dot)
+            x = self._add_noise(x + tau_x_dot)
+            
+            tau_thetaacc = self._add_noise(self.tau * thetaacc)
+            theta_dot = self._add_noise(theta_dot + tau_thetaacc)
+            
+            tau_theta_dot = self._add_noise(self.tau * theta_dot)
+            theta = self._add_noise(theta + tau_theta_dot)
+            
+        # Angle normalization with noise at each step
+        theta_plus_pi = self._add_noise(theta + np.pi)
+        theta_mod = self._add_noise(theta_plus_pi % (2 * np.pi))
+        theta = self._add_noise(theta_mod - np.pi)
 
         self.state = np.array((x, x_dot, theta, theta_dot, self.mouse_x_traj[self._elapsed_steps]), dtype=np.float64)
         self._elapsed_steps += 1

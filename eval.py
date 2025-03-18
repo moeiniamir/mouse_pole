@@ -41,6 +41,6 @@ model = PPO.load(f"ppo_mouse_following_{run_id}.zip", device="cpu")
 
 obs = vec_env.reset()
 while True:
-    action, _states = model.predict(obs)
+    action, _states = model.predict(obs, deterministic=True)
     obs, rewards, dones, info = vec_env.step(action)
     vec_env.render()
