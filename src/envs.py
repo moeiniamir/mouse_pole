@@ -195,11 +195,8 @@ class MouseFollowingCartPole(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.mouse_x_traj = [first_point]
         while len(self.mouse_x_traj) < self._max_episode_steps:
             if np.random.rand() < 0.25:
-                if np.random.rand() < 0.5:
-                    sleep_time = np.random.uniform(60, 90)/100 * self._max_episode_steps
-                else:
-                    sleep_time = np.random.uniform(5, 15)/100 * self._max_episode_steps
-                    self.mouse_x_traj.extend([self.mouse_x_traj[-1]] * int(sleep_time))
+                sleep_time = np.random.uniform(50, 100)/100 * self._max_episode_steps
+                self.mouse_x_traj.extend([self.mouse_x_traj[-1]] * int(sleep_time))
             else:
                 speed = np.random.beta(0.5, 2) * 0.49 + 0.01
                 choice = np.random.choice([mean_1, mean_2])
