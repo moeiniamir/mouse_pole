@@ -1,6 +1,6 @@
 # Mouse Following CartPole
 
-`CartPole-v1` but the cart follows the mouse.
+`CartPole-v1` but the cart follows the mouse. Demo on my [personal webpage](https://moeiniamir.github.io/).
 
 ## Installation
 
